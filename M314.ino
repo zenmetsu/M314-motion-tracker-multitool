@@ -25,9 +25,7 @@
 
 /* TYPE DEFINITIONS */
 typedef struct
-  { int x, y
-  ; bool live,drawn
-  ;
+  { char x, y, live, drawn;
   }  reflection;
 
 
@@ -40,7 +38,7 @@ typedef struct
 
 
 /* GLOBAL CONSTANTS */
-const int MIN_CYCLE_TIME_MS = 0; /* minimum time in milliseconds between new scan events */
+const int MIN_CYCLE_TIME_MS = 100; /* minimum time in milliseconds between new scan events */
 
 
 
@@ -51,9 +49,12 @@ int g_spindle_dutycycle = 255;
 unsigned long g_last_scan_timestamp = 0;
 float g_last_scan_duration_ms = 0.0;
 float g_last_range = 0.0;
-char g_new_scan = 0;
-Scene g_display;
+//Scene g_display;
 reflection g_scanlog[1024];
+uint8_t g_framebuffer[160][128];
+
+int g_dbg_scan_records = 0;
+int g_scan_index = 0;
 
 /* These are used to get information about static SRAM and flash memory sizes */
 extern "C" char __data_start[];    /* start of SRAM data */
@@ -108,7 +109,8 @@ void setup() {
     tft.setRotation(3);
 
     /* do some initialization */
-    clearFramebuffer(3);
+    clear_framebuffer();
+    clear_scanlog();
     go_sonar_mode();
 }
 
@@ -119,18 +121,16 @@ void setup() {
 void loop() {
     /* poll the LIDAR unit */ 
     pollLIDAR();
-    if ( g_new_scan > 0 ) {
-        print_sonar_metrics();
-        drawFramebuffer();
-        clearFramebuffer(1);
-        g_new_scan = 0;
-    }
-    
+
     if (digitalRead(ZOOM_IN) == HIGH) {
-        g_zoom = g_zoom * 1.001;
+        g_zoom = g_zoom * 1.0005;
+        blank_field(g_scan_index);
+        clear_framebuffer();  /* clear ui elements */
     }
     if (digitalRead(ZOOM_OUT) == HIGH) {
-        g_zoom = g_zoom / 1.001;
+        g_zoom = g_zoom / 1.0005;
+        blank_field(g_scan_index);
+        clear_framebuffer();  /* clear ui elements */
     }
 }
 
@@ -138,36 +138,44 @@ void loop() {
 
 /* GRAPHICS FUNCTIONS */
 
-void clearFramebuffer(char which) {
-    g_display.erase(which);
-}
-
-
-
-void drawFramebuffer() {
+void clear_framebuffer() {
     int x, y, w = tft.width(), h = tft.height();
     int deltas = 0;
-
-    long start = millis();
-    g_display.flip();
+    long start = micros();
+    
     for (x=0; x < w; x++) {
         for (y=0; y < h; y++) {
-           if ( !(g_display.compare(x, y)) ) {
-               tft.drawPixel(x, y, RGB332_TO_565_LUT[g_display.get(x, y)]);
-               deltas++;
-               g_display.flip();
-               pollLIDAR();
-               g_display.flip();
-           }
+                g_framebuffer[x][y] = 0x00;
         }
-    }    
+    }
+} 
+
+
+
+void clear_scanlog() {
+  for (int idx = 0; idx < sizeof(g_scanlog)/sizeof(g_scanlog[0]); idx++) {
+    g_scanlog[idx].x = 0;
+    g_scanlog[idx].y = 0;
+    g_scanlog[idx].live  = 0;
+    g_scanlog[idx].drawn = 0;
+  }
 }
 
 
-void fillFramebuffer() {
-  
-}
 
+void blank_field(int start_record) {
+    for (int idx = start_record; idx < sizeof(g_scanlog)/sizeof(g_scanlog[0]); idx++) {
+        if ( g_scanlog[idx].live ) {
+            int i = g_scanlog[idx].x;
+            int j = g_scanlog[idx].y;
+            tft.drawPixel(i, j, RGB332_TO_565_LUT[ g_framebuffer[i][j] ]);          
+            //tft.drawPixel(g_scanlog[idx].x, g_scanlog[idx].y, RGB332_TO_565_LUT[g_scanlog[idx].drawn]);
+            g_scanlog[idx].x = 0;
+            g_scanlog[idx].y = 0;
+            g_scanlog[idx].live = 0x00;
+        }
+    }
+}
 
 void drawField() {
     int x, y, w = tft.width(), h = tft.height();
@@ -177,8 +185,8 @@ void drawField() {
     x = w/2;
 
     /* draw crosshairs */
-    tft.drawFastHLine(0, y, w, M314_ORANGE);
-    tft.drawFastVLine(x, 0, h, M314_ORANGE);
+    tft.drawFastHLine(0, y, w, RGB332_TO_565_LUT[M314_ORANGE]);
+    tft.drawFastVLine(x, 0, h, RGB332_TO_565_LUT[M314_ORANGE]);
 }
 
 
@@ -210,12 +218,11 @@ void draw_sonar_ui() {
     draw_sonar_compass();
 
     /* draw bottom field */
-    tft.fillRect(0, y-1, x-32, 31, M314_BLUE);
-    tft.fillRect(x+32, y-1, x-32, 31, M314_BLUE);
-    tft.fillRect(0, h-11, w, h, M314_BLUE);
-    tft.fillTriangle(x-32, y-1, x-32, h, x-20, h, M314_BLUE);
-    tft.fillTriangle(x+32, y-1, x+32, h, x+20, h, M314_BLUE);
-    pollLIDAR();
+    tft.fillRect(0, y-1, x-32, 31, RGB332_TO_565_LUT[M314_BLUE]);
+    tft.fillRect(x+32, y-1, x-32, 31, RGB332_TO_565_LUT[M314_BLUE]);
+    tft.fillRect(0, h-11, w, h, RGB332_TO_565_LUT[M314_BLUE]);
+    tft.fillTriangle(x-32, y-1, x-32, h, x-20, h, RGB332_TO_565_LUT[M314_BLUE]);
+    tft.fillTriangle(x+32, y-1, x+32, h, x+20, h, RGB332_TO_565_LUT[M314_BLUE]);
 
     /* add text to bottom field */
     tft.setTextSize(1);
@@ -230,12 +237,16 @@ void draw_sonar_ui() {
 
 
 
-void drawArc(int16_t x, int16_t y, int16_t r, float rs, float re, uint16_t color) { 
+void drawArc(int16_t x, int16_t y, int16_t r, float rs, float re, char color) { 
     const float degrad = 0.01745329252;
+    int col,row;
     int16_t _width = tft.width(), _height = tft.height();
       
     for (float i = rs*degrad; i < re*degrad; i += (5.0/r)) {
-        tft.drawPixel(x + cos(i) * r, y + sin(i) * r, color);
+        col = x + cos(i) * r;
+        row = y + sin(i) * r;
+        tft.drawPixel(col, row, RGB332_TO_565_LUT[color]);
+        g_framebuffer[(char)col][(char)row] = color;
     }
 }
 
@@ -243,7 +254,7 @@ void drawArc(int16_t x, int16_t y, int16_t r, float rs, float re, uint16_t color
 
 void print_sonar_scan_freq() {
     /* set background color to erase prior value */
-    tft.setTextColor(M314_BLUE);
+    tft.setTextColor(RGB332_TO_565_LUT[M314_BLUE]);
     tft.setTextSize(1);   
     //tft.setFont(&Picopixel);
 
@@ -256,8 +267,7 @@ void print_sonar_scan_freq() {
         
         /* change color and update global vars */
         if ( !(draw_cycle) ) {
-            pollLIDAR();
-            tft.setTextColor(M314_WHITE);
+            tft.setTextColor(RGB332_TO_565_LUT[M314_WHITE]);
             g_last_scan_duration_ms = 1000.0 / (float)(millis() - g_last_scan_timestamp);
             g_last_scan_timestamp = millis();
         }
@@ -306,8 +316,7 @@ void print_sonar_scan_range() {
             
             /* change color and update global vars */
             if ( !(draw_cycle) ) {
-                pollLIDAR();
-                tft.setTextColor(M314_RED);
+                tft.setTextColor(RGB332_TO_565_LUT[M314_RED]);
                 g_last_range = range;
             }
         }
@@ -334,30 +343,45 @@ void pollLIDAR() {
     const float degrad = 0.01745329252;
     Coordinates point = Coordinates();
     float range = 0.001 * (200.0/g_zoom) * (h / 2);
-    float start_time = millis();
-    
+    float start_time = micros();
+    float bearing,reach;
+    //Serial.print("pollLIDAR ");
+
     if ( IS_OK(lidar.waitPoint()) ) {
+        //Serial.print("O");
         float distance = lidar.getCurrentPoint().distance; /* distance value in mm */
         float angle    = lidar.getCurrentPoint().angle;    /* angle value in degrees */
         bool  startBit = lidar.getCurrentPoint().startBit; /* is point first in new scan */
         byte  quality  = lidar.getCurrentPoint().quality;  /* quality of current point */
 
+        bearing = angle;
+        reach = distance; 
         /* did we start a new scan? */
         if (startBit) {
+            //Serial.print("N");
             if ((millis() - g_last_scan_timestamp) > MIN_CYCLE_TIME_MS) {
-                g_new_scan++;
+                //Serial.print("D");
+                blank_field(g_scan_index);
+                g_scan_index = 0;
+                g_dbg_scan_records = 0;
+                print_sonar_metrics();
             }        
         } 
-      
+        
         point.fromPolar(g_zoom*distance/200.0,angle*degrad);
         x = (int16_t)((w/2) - point.getY());
         y = (int16_t)((h/2) - point.getX());
-        
+        g_dbg_scan_records++;
+        g_scan_index++;
         /* check if point is onscreen */
-        if ( (x>=0) && (y>=0) && (x<w) && (y<h) ) { 
-                g_display.put(x, y, M314_BLUE);
-                //g_scanlog[g_scanlog_idx].x = x;
-                //g_scanlog[g_scanlog_idx].y = y;
+        if ( (x>=0) && (y>=0) && (x<w) && (y<h) ) {
+                int i = g_scanlog[g_scan_index].x;
+                int j = g_scanlog[g_scan_index].y;
+                tft.drawPixel(i, j, RGB332_TO_565_LUT[ g_framebuffer[i][j] ]);
+                g_scanlog[g_scan_index].x = x;
+                g_scanlog[g_scan_index].y = y;
+                g_scanlog[g_scan_index].live = M314_BLUE;
+                tft.drawPixel(x, y, RGB332_TO_565_LUT[M314_WHITE]);
             }
         
         if (g_debugging) {
@@ -393,6 +417,17 @@ void pollLIDAR() {
         analogWrite(RPLIDAR_MOTOR, g_spindle_dutycycle);
         delay(1000);
     }
+    /*
+    Serial.print(" time(uS): ");
+    Serial.print( micros() - start_time );
+    Serial.print(" #");
+    Serial.print(g_dbg_scan_records);
+    Serial.print(" ");
+    Serial.print(reach,0);
+    Serial.print("@");
+    Serial.print(bearing);
+    Serial.println("deg");    
+    */
 }
 
 
