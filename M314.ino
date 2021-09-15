@@ -1,5 +1,4 @@
 #include <SPI.h>
-//#include <TFT_eSPI.h>
 #include <interrupt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,25 +7,11 @@
 #include "framebuffer.h"
 #include "coordinates.h"
 #include "RPLidar.h"
-//#include "Picopixel.h"
 #include "profiling.h"
 
-
-
-/* pin definitions */
-//#define TFT_DC D11
-//#define TFT_CS D10
-//#define TFT_RS -1
 #define ZOOM_IN D5
 #define ZOOM_OUT D6
 #define RPLIDAR_MOTOR A1      /* PWM pin for LIDAR motor */
-
-
-
-/* TYPE DEFINITIONS */
-typedef struct { 
-    char x, y, live, drawn; 
-}  reflection;
 
 
 
@@ -35,13 +20,14 @@ typedef struct {
 #define PROFILING_MAIN 1 /* this needs to be true in at least ONE .c, .cpp, or .ino file in your sketch */
 #define MAXPROF 8        /* override the number of bins */
 
+/*
 #define BLACK  0x00
 #define BLUE   0x0D
 #define LTBLUE 0x0D
 #define ORANGE 0xF0
 #define RED    0xE0
 #define WHITE  0xFF
-
+*/
 
 
 /* GLOBAL CONSTANTS */
@@ -51,18 +37,7 @@ const int MIN_CYCLE_TIME_MS = 100; /* minimum time in milliseconds between new s
 
 /* GLOBAL VARIABLES */
 bool g_debugging = false;
-//float g_zoom = 5;
 int g_spindle_dutycycle = 255;
-//unsigned long g_last_scan_timestamp = 0;
-//float g_last_scan_duration_ms = 0.0;
-//float g_last_range = 0.0;
-//Scene g_display;
-//reflection g_scanlog[1024];
-//uint8_t g_framebuffer[160][128];
-
-
-//int g_dbg_scan_records = 0;
-//int g_scan_index = 0;
 
 /* These are used to get information about static SRAM and flash memory sizes */
 extern "C" char __data_start[];    /* start of SRAM data */
@@ -81,7 +56,6 @@ unsigned int tcnt2; /* used to store timer value */
 /* create driver instances */
 RPLidar lidar;
 HardwareSerial Serial1(D0, D1);
-//TFT_eSPI tft = TFT_eSPI(); 
 TrackerDisplay display;
 
 
@@ -111,7 +85,6 @@ void setup() {
     analogWrite(RPLIDAR_MOTOR, 0);
   
     /* initialize the display */
-    //tft.initR(INITR_BLACKTAB);
     display.init();
     display.fill_screen(TrackerDisplay::M314_BLACK);
     display.set_rotation(3);
@@ -134,12 +107,10 @@ void loop() {
     if (digitalRead(ZOOM_IN) == HIGH) {
         display.update_zoom(1.0005);
         display.blank_field();
-        //display.framebuffer_clear();  /* clear ui elements */
     }
     if (digitalRead(ZOOM_OUT) == HIGH) {
         display.update_zoom(1/1.0005);
         display.blank_field();
-        //display.framebuffer_clear();  /* clear ui elements */
     }
 }
 
@@ -241,9 +212,3 @@ void pollLIDAR() {
 
 
 /* INITIALIZING FUNCTIONS */
-
-
-
-
-
-   
