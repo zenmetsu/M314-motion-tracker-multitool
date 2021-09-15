@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include "ui.h"
-#include "framebuffer.h"
 #include "coordinates.h"
 #include "RPLidar.h"
 #include "profiling.h"
@@ -20,14 +19,12 @@
 #define PROFILING_MAIN 1 /* this needs to be true in at least ONE .c, .cpp, or .ino file in your sketch */
 #define MAXPROF 8        /* override the number of bins */
 
-/*
-#define BLACK  0x00
-#define BLUE   0x0D
-#define LTBLUE 0x0D
-#define ORANGE 0xF0
-#define RED    0xE0
-#define WHITE  0xFF
-*/
+/* debugging macros */
+#define DL(x) Serial.print(x)
+#define DLn(x) Serial.println(x)
+#define DV(m, v) do{Serial.print(m);Serial.print(v);Serial.print(" ");}while(0)
+#define DVn(m, v) do{Serial.print(m);Serial.println(v);}while(0)
+
 
 
 /* GLOBAL CONSTANTS */
@@ -44,7 +41,6 @@ extern "C" char __data_start[];    /* start of SRAM data */
 extern "C" char _end[];            /* end of SRAM data (used to check amount of SRAM this program's variables use) */
 extern "C" char __data_load_end[]; /* end of FLASH (used to check amount of Flash this program's code and data uses) */
 
-//enum ui_modes{system_menu, sonar, mapping, thermal};
 TrackerDisplay::ui_modes ui_mode;
 
 /* profiler timekeeping */
@@ -52,23 +48,16 @@ volatile unsigned int int_counter;
 volatile unsigned char seconds, minutes;
 unsigned int tcnt2; /* used to store timer value */
 
-                       
+
+
 /* create driver instances */
 RPLidar lidar;
 HardwareSerial Serial1(D0, D1);
 TrackerDisplay display;
 
 
-/* debugging macros */
-#define DL(x) Serial.print(x)
-#define DLn(x) Serial.println(x)
-#define DV(m, v) do{Serial.print(m);Serial.print(v);Serial.print(" ");}while(0)
-#define DVn(m, v) do{Serial.print(m);Serial.println(v);}while(0)
 
-
-
-/* ONE-TIME EXECUTION BLOCK */
-                        
+/* ONE-TIME EXECUTION BLOCK */                        
 void setup() {
     /* set pin modes */
     pinMode(RPLIDAR_MOTOR, OUTPUT);
@@ -99,7 +88,6 @@ void setup() {
 
 
 /* MAIN EXECUTION BLOCK */
-
 void loop() {
     /* poll the LIDAR unit */ 
     pollLIDAR();
@@ -116,15 +104,7 @@ void loop() {
 
 
 
-/* GRAPHICS FUNCTIONS */
-
-
-/* DATA CONTROL FUNCTIONS */
-
-
-
 /* HARDWARE CONTROL FUNCTIONS */
-
 void pollLIDAR() {
     int x, y, ox, oy, w = display.get_width(), h = display.get_height();
     const float degrad = 0.01745329252;
@@ -196,17 +176,6 @@ void pollLIDAR() {
         analogWrite(RPLIDAR_MOTOR, g_spindle_dutycycle);
         delay(1000);
     }
-    /*
-    Serial.print(" time(uS): ");
-    Serial.print( micros() - start_time );
-    Serial.print(" #");
-    Serial.print(g_dbg_scan_records);
-    Serial.print(" ");
-    Serial.print(reach,0);
-    Serial.print("@");
-    Serial.print(bearing);
-    Serial.println("deg");    
-    */
 }
 
 
