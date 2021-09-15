@@ -200,11 +200,11 @@ void TrackerDisplay::draw_sonar_ui() {
     tft.setTextSize(1);
     tft.setTextColor(RGB332_TO_565_LUT[M314_WHITE]);
     tft.setCursor(3, 103);
-    //tft.setFont(&Picopixel);
+    tft.setFreeFont(&Picopixel);
     tft.print("FEMS 5.547.52");
     tft.setCursor(112, 109);
     tft.print("CX. 54/");
-    //tft.setFont();
+    tft.setFreeFont();
 }
 
 
@@ -229,7 +229,7 @@ void TrackerDisplay::print_sonar_scan_freq() {
     /* set background color to erase prior value */
     tft.setTextColor(RGB332_TO_565_LUT[M314_BLUE]);
     tft.setTextSize(1);   
-    //tft.setFont(&Picopixel);
+    tft.setFreeFont(&Picopixel);
 
     /* perform an erase and draw cycle */
     for (int draw_cycle = 0; draw_cycle < 2; draw_cycle++) {
@@ -259,7 +259,7 @@ void TrackerDisplay::print_sonar_scan_range() {
     
         /* set background color to erase prior value */
         tft.setTextColor(M314_BLACK);
-        //tft.setFont();
+        tft.setFreeFont();
         
         /* perform an erase and draw cycle */
         for (int draw_cycle = 0; draw_cycle < 2; draw_cycle++) {
