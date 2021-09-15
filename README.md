@@ -157,11 +157,11 @@ Project Link: [https://github.com/zenmetsu/M314-motion-tracker-multitool](https:
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/zenmetsu/M314-motion-tracker-multitool?style=for-the-badge
 [contributors-url]: https://github.com/zenmetsu/M314-motion-tracker-multitool/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/zenmetsu/repo.svg?style=for-the-badge
+[forks-shield]: https://img.shields.io/github/forks/zenmetsu/M314-motion-tracker-multitool?style=for-the-badge
 [forks-url]: https://github.com/zenmetsu/M314-motion-tracker-multitool/network/members
-[stars-shield]: https://img.shields.io/github/stars/zenmetsu/repo.svg?style=for-the-badge
+[stars-shield]: https://img.shields.io/github/stars/zenmetsu/M314-motion-tracker-multitool?style=for-the-badge
 [stars-url]: https://github.com/zenmetsu/M314-motion-tracker-multitool/stargazers
-[issues-shield]: https://img.shields.io/github/issues/zenmetsu/repo.svg?style=for-the-badge
+[issues-shield]: https://img.shields.io/github/issues/zenmetsu/M314-motion-tracker-multitool?style=for-the-badge
 [issues-url]: https://github.com/zenmetsu/M314-motion-tracker-multitool/issues
 [license-shield]: https://img.shields.io/github/license/zenmetsu/M314-motion-tracker-multitool?style=for-the-badge
 [license-url]: https://github.com/zenmetsu/M314-motion-tracker-multitool/blob/main/LICENSE.txt
