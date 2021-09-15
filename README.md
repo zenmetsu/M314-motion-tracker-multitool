@@ -96,7 +96,7 @@ I have built several multitools in the past; devices which contain a wide array 
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To get a local copy up and running follow these simple steps.
+Don't.  This project is in a rapid state of flux as it has just been initiated.  Photos/videos to come.
 
 ### Prerequisites
 
