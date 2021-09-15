@@ -5,24 +5,12 @@ class TrackerDisplay {
     public:
         TrackerDisplay();
 
-        typedef struct { 
-            char x, y, live, drawn; 
-        }  reflection;
-
-        reflection scanlog[1024];
-
-        int scan_index;
-
-        uint8_t framebuffer[160][128];
-
         enum ui_modes{system_menu, sonar, mapping, thermal};
         enum ui_modes ui_mode;
         
         float time_last_scan_ms;
         float scan_frequency;
         float ui_current_zoom, last_range;
-
-        
 
 
 
@@ -34,28 +22,26 @@ class TrackerDisplay {
 
         /* framebuffer control */
         void framebuffer_clear();
-        void framebuffer_put(int x, int y, char color);
-        char framebuffer_get(int x, int y);
-        const char* getPixels();
+        void refresh();
 
         /* graphics functions */
         void fill_screen(int color);
-        void put_record(int x, int y, char color);
-        void draw_pixel(int x, int y, char color);
-        void draw_hline(int x, int y, int l, char color);
-        void draw_vline(int x, int y, int l, char color);
-        void tri(int x0, int y0, int x1, int y1, int x2, int y2, char color);
-        void rect(int x, int y, int w, int h, char color);
-        void tri_fill(int x0, int y0, int x1, int y1, int x2, int y2, char color);
-        void rect_fill(int x, int y, int w, int h, char color);
+        void put_record(int x, int y, int color);
+        void draw_pixel(int x, int y, int color);
+        void draw_hline(int x, int y, int l, int color);
+        void draw_vline(int x, int y, int l, int color);
+        void tri(int x0, int y0, int x1, int y1, int x2, int y2, int color);
+        void rect(int x, int y, int w, int h, int color);
+        void tri_fill(int x0, int y0, int x1, int y1, int x2, int y2, int color);
+        void rect_fill(int x, int y, int w, int h, int color);
 
-        void draw_arc(int16_t x, int16_t y, int16_t r, float rs, float re, char color);
+        void draw_arc(int16_t x, int16_t y, int16_t r, float rs, float re, int color);
         
         
         /* text functions */        
         void set_cursor(int x, int y);
         void set_text_size(char size);
-        void set_text_color(char color);
+        void set_text_color(int color);
         void print(const char* text);
 
         /* ui functions */
@@ -76,18 +62,20 @@ class TrackerDisplay {
 
         void switch_mode(ui_modes mode);
 
-        static const char M314_BLACK  = 0x00;
-        static const char M314_BLUE   = 0x0D;
-        static const char M314_LTBLUE = 0x0D;
-        static const char M314_ORANGE = 0xF0;
-        static const char M314_RED    = 0xE0;
-        static const char M314_WHITE  = 0xFF;
+        static const int M314_BLACK  = 0x0000;
+        static const int M314_BLUE   = 0x03EC;
+        static const int M314_LTBLUE = 0x03EC;
+        static const int M314_ORANGE = 0xFC00;
+        static const int M314_RED    = 0xF800;
+        static const int M314_WHITE  = 0xFFFF;
+
+
 
     private:
         static const int WIDTH = 160;
         static const int HEIGHT = 128;
+        static const int COLOR_DEPTH = 16;
 
-        char pixels_[WIDTH * HEIGHT];
 };
 
 #endif /*\ #ifndef __TrackerDisplay_h_ \*/

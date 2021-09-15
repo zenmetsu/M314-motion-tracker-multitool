@@ -28,13 +28,15 @@
 
 
 /* GLOBAL CONSTANTS */
-const int MIN_CYCLE_TIME_MS = 100; /* minimum time in milliseconds between new scan events */
+const int MIN_CYCLE_TIME_MS = 155; /* minimum time in milliseconds between new scan events */
 
 
 
 /* GLOBAL VARIABLES */
 bool g_debugging = false;
 int g_spindle_dutycycle = 255;
+float g_last_theta = 0;
+int g_last_refresh = 0;
 
 /* These are used to get information about static SRAM and flash memory sizes */
 extern "C" char __data_start[];    /* start of SRAM data */
@@ -75,12 +77,10 @@ void setup() {
   
     /* initialize the display */
     display.init();
-    display.fill_screen(TrackerDisplay::M314_BLACK);
-    display.set_rotation(3);
+
 
     /* do some initialization */
     display.framebuffer_clear();  /* clear ui elements */
-    display.clear_scanlog();
     ui_mode = TrackerDisplay::sonar;
     display.switch_mode(ui_mode);
 }
@@ -94,11 +94,13 @@ void loop() {
 
     if (digitalRead(ZOOM_IN) == HIGH) {
         display.update_zoom(1.0005);
-        display.blank_field();
     }
     if (digitalRead(ZOOM_OUT) == HIGH) {
         display.update_zoom(1/1.0005);
-        display.blank_field();
+    }
+    if ((millis() - g_last_refresh) > MIN_CYCLE_TIME_MS ) {
+        display.refresh();
+        g_last_refresh = millis();
     }
 }
 
@@ -111,37 +113,22 @@ void pollLIDAR() {
     Coordinates point = Coordinates();
     float range = 0.001 * (200.0/display.ui_current_zoom) * (h / 2);
     float start_time = micros();
-    float bearing,reach;
-    //Serial.print("pollLIDAR ");
 
     if ( IS_OK(lidar.waitPoint()) ) {
-        //Serial.print("O");
         float distance = lidar.getCurrentPoint().distance; /* distance value in mm */
         float angle    = lidar.getCurrentPoint().angle;    /* angle value in degrees */
         bool  startBit = lidar.getCurrentPoint().startBit; /* is point first in new scan */
         byte  quality  = lidar.getCurrentPoint().quality;  /* quality of current point */
 
-        bearing = angle;
-        reach = distance; 
-        /* did we start a new scan? */
-        if (startBit) {
-            //Serial.print("N");
-            if ((millis() - display.time_last_scan_ms) > MIN_CYCLE_TIME_MS) {
-                //Serial.print("D");
-                display.blank_field();
-                display.scan_index = 0;
-                display.update_metrics();
-            }        
-        } 
-        
+        g_last_theta = angle;
         point.fromPolar(display.ui_current_zoom*distance/200.0,angle*degrad);
         x = (int16_t)((w/2) - point.getY());
         y = (int16_t)((h/2) - point.getX());
-        display.scan_index++;
+        
         /* check if point is onscreen */
         if ( (x>=0) && (y>=0) && (x<w) && (y<h) ) {
-                display.put_record(x, y, TrackerDisplay::M314_WHITE);
-            }
+            display.put_record(x, y, TrackerDisplay::M314_WHITE);
+        } 
         
         if (g_debugging) {
             /* pad distance with leading zeros */
@@ -158,8 +145,7 @@ void pollLIDAR() {
             if (angle < 10) Serial.print("0");
             Serial.println(angle, 2);
         }
-    } 
-    else { /*\ if (IS_OK(lidar.waitPoint())) \*/
+    } else { /*\ if (IS_OK(lidar.waitPoint())) \*/
         Serial.println("NOK...");
         
         /* stop the LIDAR motor */
