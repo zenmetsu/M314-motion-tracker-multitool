@@ -13,7 +13,7 @@
 <br />
 <p align="center">
   <a href="https://github.com/zenmetsu/M314-motion-tracker-multitool">
-    <img src="M314.png" alt="Logo" width="480" height="320">
+    <img src="M314.png" alt="Logo" width="387" height="281">
   </a>
 
   <h3 align="center">M314 Motion Tracker (multitool)</h3>
