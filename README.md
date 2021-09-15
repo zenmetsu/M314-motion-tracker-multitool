@@ -163,7 +163,7 @@ Project Link: [https://github.com/zenmetsu/M314-motion-tracker-multitool](https:
 [stars-url]: https://github.com/zenmetsu/M314-motion-tracker-multitool/stargazers
 [issues-shield]: https://img.shields.io/github/issues/zenmetsu/repo.svg?style=for-the-badge
 [issues-url]: https://github.com/zenmetsu/M314-motion-tracker-multitool/issues
-[license-shield]: https://img.shields.io/github/license/zenmetsu/repo.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/zenmetsu/M314-motion-tracker-multitool
 [license-url]: https://github.com/zenmetsu/M314-motion-tracker-multitool/blob/main/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/zenmetsu
