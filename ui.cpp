@@ -1,16 +1,30 @@
 #include <TFT_eSPI.h>
 #include "ui.h"
+#include "analogvideo.h"
 #include "Picopixel.h"
-
 
 
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite img = TFT_eSprite(&tft);  /* sprite class, used as framebuffer */
-uint16_t* sprPtr;                     /* pointer to sprite */
+uint16_t* sprPtr0;                    /* pointer to sprite */
+uint16_t* sprPtr1;                    /* pointer to sprite */
+
+
+/* these hold timestamps to end given effects */
+int expire_vert_scroll = 0; 
+int expire_hori_scroll = 0;
+int expire_hori_warp   = 0;
+int expire_ringing     = 0;
+int expire_chrom_dly   = 0;
+int expire_chrom_noise = 0;
+
+/* these hold parameters for analog glitches */
+int glitch_vert,glitch_hori = 0;
+int chrom_noise = 0;
+int ring_level = 0;
 
 
 TrackerDisplay::TrackerDisplay() {
-  //framebuffer_clear();
 }
 
 /* hardware control */
@@ -22,7 +36,7 @@ void TrackerDisplay::init() {
     img.setColorDepth(COLOR_DEPTH);
 
     /* create sprite */
-    sprPtr = (uint16_t*)img.createSprite(WIDTH, HEIGHT);
+    sprPtr0 = (uint16_t*)img.createSprite(WIDTH, HEIGHT);
 
     /* hold CS low for maximum effect */
     tft.startWrite();
@@ -61,9 +75,43 @@ void TrackerDisplay::framebuffer_clear() {
 void TrackerDisplay::refresh() {
 
     /* push framebuffer using DMA */
-    tft.pushImage(0, 0, tft.width(), tft.height(), sprPtr);
+    //tft.pushImage(0, 0, tft.width(), tft.height(), sprPtr0);
+    //tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr1);
+    
+    trigger_power_on();
+    
+    draw_test_card();
+    tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
+    delay(1000);
+    
+    for (int loops = 0; loops < random(11); loops++){
+        for (glitch_vert = 0;glitch_vert<random(20);glitch_vert++) {
+            glitch_hori_warp(&tft, sprPtr0);
+            delay(15);
+            draw_test_card();
+        }
+        draw_test_card();
+        tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
+        delay(random(1800));
+    }
 
-    draw_sonar_ui();
+    draw_test_card();
+    tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
+    delay(1100);
+    
+    glitch_power_off(&tft, sprPtr0);
+}
+
+/* graphics effects */
+void TrackerDisplay::trigger_power_on() {
+    draw_test_card();
+    for (glitch_vert = 0;glitch_vert<60;glitch_vert++) {
+        glitch_vert_scroll(&tft, sprPtr0, glitch_vert);
+        glitch_vert += ((millis() % 18) / 16) + (32 * (tft.height() - (glitch_vert % tft.height())) / tft.height());
+
+        glitch_hori_scroll(&tft, sprPtr0, glitch_vert);
+        glitch_vert += 2;      
+    }    
 }
 
 
@@ -80,7 +128,7 @@ void TrackerDisplay::draw_arc(int16_t x, int16_t y, int16_t r, float rs, float r
     int col,row;
     int16_t _width = tft.width(), _height = tft.height();
       
-    for (float i = rs*degrad; i < re*degrad; i += (5.0/r)) {
+    for (float i = rs*degrad; i < re*degrad; i += (0.50/r)) {
         col = x + cos(i) * r;
         row = y + sin(i) * r;
         img.drawPixel(col, row, color);
@@ -102,6 +150,54 @@ void TrackerDisplay::update_zoom(float ratio) {
 }
 
 
+void TrackerDisplay::draw_test_card() {
+  int column,row = 0;
+  img.fillRect(0 + (23*column), 0, 23, 85, 0xC618);
+  column++;
+  img.fillRect(0 + (23*column), 0, 23, 85, 0xC600);
+  column++;
+  img.fillRect(0 + (23*column), 0, 23, 85, 0x0618);
+  column++;
+  img.fillRect(0 + (23*column), 0, 23, 85, 0x0600);
+  column++;
+  img.fillRect(0 + (23*column), 0, 23, 85, 0xC018);
+  column++;
+  img.fillRect(0 + (23*column), 0, 23, 85, 0xC000);
+  column++;
+  img.fillRect(0 + (23*column), 0, 22, 85, 0x0018);
+  column = 0;
+  
+  img.fillRect(0 + (23*column), 85, 23, 11, 0x0018);
+  column++;
+  img.fillRect(0 + (23*column), 85, 23, 11, 0x1082);
+  column++;
+  img.fillRect(0 + (23*column), 85, 23, 11, 0xC018);
+  column++;
+  img.fillRect(0 + (23*column), 85, 23, 11, 0x1082);
+  column++;
+  img.fillRect(0 + (23*column), 85, 23, 11, 0x0618);
+  column++;
+  img.fillRect(0 + (23*column), 85, 23, 11, 0x1082);
+  column++;
+  img.fillRect(0 + (23*column), 85, 22, 11, 0xc618);
+  column = 0;
+
+  img.fillRect(0 + (29*column), 96, 29, 31, 0x0109);
+  column++;
+  img.fillRect(0 + (29*column), 96, 29, 31, 0xFFFF);
+  column++;
+  img.fillRect(0 + (29*column), 96, 29, 31, 0x300D);
+  column++;
+  img.fillRect(0 + (29*column), 96, 29, 31, 0x1082);
+  column++;
+
+  img.fillRect(114 , 96, 8, 31, 0x0841);
+  img.fillRect(114 + 8, 96, 8, 31, 0x1082);
+  img.fillRect(114 + 16, 96, 7, 31, 0x18E3);
+  img.fillRect(114 + 23, 96, 23, 31, 0x1082);
+}
+
+
 void TrackerDisplay::draw_sonar_ui() {
     int x, y, w = tft.width(), h = tft.height();
 
@@ -117,15 +213,15 @@ void TrackerDisplay::draw_sonar_ui() {
 
     /* draw bottom field */
     img.fillRect(0, y-1, x-32, 31, M314_BLUE);
-    img.fillRect(x+32, y-1, x-32, 31, M314_BLUE);
+    img.fillRect(x+30, y-1, x-30, 31, M314_BLUE);
     img.fillRect(0, h-11, w, h, M314_BLUE);
     img.fillTriangle(x-32, y-1, x-32, h, x-20, h, M314_BLUE);
-    img.fillTriangle(x+32, y-1, x+32, h, x+20, h, M314_BLUE);
+    img.fillTriangle(x+30, y-1, x+32, h, x+20, h, M314_BLUE);
 
     /* add text to bottom field */
     img.setTextSize(1);
     img.setTextColor(M314_WHITE);
-    img.setCursor(3, 103);
+    img.setCursor(3, 109);
     img.setFreeFont(&Picopixel);
     img.print("FEMS 5.547.52");
     img.setCursor(112, 109);
@@ -236,9 +332,12 @@ void TrackerDisplay::draw_lasernav_ui() {
 
 
 
-void TrackerDisplay::switch_mode(ui_modes mode){    
+void TrackerDisplay::switch_mode(ui_modes mode){
+    /*  
     ui_mode = sonar;
     draw_sonar_ui();
     update_metrics();
     last_range = 0.001 * (200.0/ui_current_zoom) * (tft.height() / 2);
+    */
+    draw_test_card();
 }

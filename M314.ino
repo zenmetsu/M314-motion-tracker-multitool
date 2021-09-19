@@ -11,6 +11,7 @@
 #define ZOOM_IN D5
 #define ZOOM_OUT D6
 #define RPLIDAR_MOTOR A1      /* PWM pin for LIDAR motor */
+#define BUZZER A0
 
 
 
@@ -28,13 +29,13 @@
 
 
 /* GLOBAL CONSTANTS */
-const int MIN_CYCLE_TIME_MS = 155; /* minimum time in milliseconds between new scan events */
+const int MIN_CYCLE_TIME_MS = 33; /* minimum time in milliseconds between new scan events */
 
 
 
 /* GLOBAL VARIABLES */
 bool g_debugging = false;
-int g_spindle_dutycycle = 255;
+int g_spindle_dutycycle = 128;
 float g_last_theta = 0;
 int g_last_refresh = 0;
 
@@ -90,7 +91,7 @@ void setup() {
 /* MAIN EXECUTION BLOCK */
 void loop() {
     /* poll the LIDAR unit */ 
-    pollLIDAR();
+    //pollLIDAR();
 
     if (digitalRead(ZOOM_IN) == HIGH) {
         display.update_zoom(1.0005);
@@ -99,8 +100,13 @@ void loop() {
         display.update_zoom(1/1.0005);
     }
     if ((millis() - g_last_refresh) > MIN_CYCLE_TIME_MS ) {
+        //Serial.print(millis() - g_last_refresh);
+        //Serial.print(", ");
+        //Serial.println(millis());
         display.refresh();
         g_last_refresh = millis();
+        //tone(BUZZER, 11000, 20);
+        //tone(BUZZER, 10000, 10);
     }
 }
 
@@ -123,10 +129,10 @@ void pollLIDAR() {
         g_last_theta = angle;
         point.fromPolar(display.ui_current_zoom*distance/200.0,angle*degrad);
         x = (int16_t)((w/2) - point.getY());
-        y = (int16_t)((h/2) - point.getX());
+        y = (int16_t)((h/2) - point.getX() + 32);
         
         /* check if point is onscreen */
-        if ( (x>=0) && (y>=0) && (x<w) && (y<h) ) {
+        if ( (x>=0) && (y>=0) && (x<w) && (y< (h - 32)) ) {
             display.put_record(x, y, TrackerDisplay::M314_WHITE);
         } 
         

@@ -24,6 +24,9 @@ class TrackerDisplay {
         void framebuffer_clear();
         void refresh();
 
+        /* graphics effects */
+        void trigger_power_on();
+
         /* graphics functions */
         void fill_screen(int color);
         void put_record(int x, int y, int color);
@@ -50,6 +53,8 @@ class TrackerDisplay {
 
         void update_scantime();
         void update_zoom(float ratio);
+
+        void draw_test_card();
         
         void draw_sonar_ui();
         void draw_sonar_compass();
