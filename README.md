@@ -118,17 +118,12 @@ Currently:
 * []() emulating analog CRT effects for LCD display (need to add chroma delay, chroma noise, and ringing)
 
 To do:
-Add user interface graphics / menu system.
-
-Add boot/initialization animation.
-
-Add audio effects.
-
-I have a 16-key SPI keypad which will be integrated with the device as well.  
-
-~Once my 3D Printer is back online, I will print up the casing that I modeled in Blender.~  Pending confirmation that the .stl files are adequate, I will post them in this repo.
-
-I plan on adding a USB-C charging port, an internal 1000mAH LiPo 1S pack to power the unit when the main battery, a 2200mAH 3S pack, is removed during a battery swap.
+* []() Add user interface graphics / menu system.
+* []() Add boot/initialization animation.
+* []() Add audio effects.
+* []() I have a 16-key SPI keypad which will be integrated with the device as well.  
+* []() ~Once my 3D Printer is back online, I will print up the casing that I modeled in Blender.~  Pending confirmation that the .stl files are adequate, I will post them in this repo.
+* []() I plan on adding a USB-C charging port, an internal 1000mAH LiPo 1S pack to power the unit when the main battery, a 2200mAH 3S pack, is removed during a battery swap.
 
 <!-- CONTRIBUTING -->
 ## Contributing
