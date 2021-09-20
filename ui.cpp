@@ -19,7 +19,7 @@ int expire_chrom_dly   = 0;
 int expire_chrom_noise = 0;
 
 /* these hold parameters for analog glitches */
-int glitch_vert,glitch_hori = 0;
+int glitch_vert,glitch_hori,glitch_vert_speed = 0;
 int chrom_noise = 0;
 int ring_level = 0;
 
@@ -43,6 +43,12 @@ void TrackerDisplay::init() {
     
     //scan_index = 0;
     ui_current_zoom = 5.0;
+
+    trigger_power_on();
+    
+    draw_test_card();
+    tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
+    delay(1000);    
 }
 
 
@@ -77,29 +83,45 @@ void TrackerDisplay::refresh() {
     /* push framebuffer using DMA */
     //tft.pushImage(0, 0, tft.width(), tft.height(), sprPtr0);
     //tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr1);
-    
-    trigger_power_on();
-    
+
+    /* draw a test pattern while debugging analog video routines */
     draw_test_card();
-    tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
-    delay(1000);
-    
-    for (int loops = 0; loops < random(11); loops++){
-        for (glitch_vert = 0;glitch_vert<random(20);glitch_vert++) {
-            glitch_hori_warp(&tft, sprPtr0);
-            delay(15);
-            draw_test_card();
-        }
-        draw_test_card();
-        tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
-        delay(random(1800));
+
+    /* trigger horizontal warp */
+    if (random(1000) > 990) {
+        expire_hori_warp = millis() + random(100);
     }
 
-    draw_test_card();
-    tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
-    delay(1100);
-    
-    glitch_power_off(&tft, sprPtr0);
+    /* trigger vertical scroll */
+    if ((millis() > expire_vert_scroll) && (random(1000) > 998)) {
+        expire_vert_scroll = millis() + random(400);
+        glitch_vert = 0;
+        glitch_vert_speed = random(16);
+    }    
+
+    /* do horizontal warp if true */
+    if ( millis() < expire_hori_warp) {
+        glitch_hori_warp(&tft, sprPtr0);
+
+    /* do vertical scroll if true */
+    } else if ( millis() < expire_vert_scroll) {
+        glitch_vert+=glitch_vert_speed;
+        glitch_vert_scroll(&tft, sprPtr0, glitch_vert);
+
+    /* else be boring */
+    } else {
+        tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
+    }
+
+    /* simulate a power off every minute */
+    if ((millis() % 60000) < 100) {
+        glitch_power_off(&tft, sprPtr0);
+    }
+
+    /* and a power on 3 seconds later */
+    if ((millis()-3000 % 60000) < 200){
+        trigger_power_on();
+    }
 }
 
 /* graphics effects */
