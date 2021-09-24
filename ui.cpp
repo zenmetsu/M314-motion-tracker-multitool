@@ -2,12 +2,15 @@
 #include "ui.h"
 #include "analogvideo.h"
 #include "Picopixel.h"
+#include "coordinates.h"
 
 
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite img = TFT_eSprite(&tft);  /* sprite class, used as framebuffer */
+//TFT_eSprite fbb = TFT_eSprite(&tft);  /* framebuffer backup */
+
 uint16_t* sprPtr0;                    /* pointer to sprite */
-uint16_t* sprPtr1;                    /* pointer to sprite */
+//uint16_t* fbbPtr; 
 
 
 /* these hold timestamps to end given effects */
@@ -34,9 +37,11 @@ void TrackerDisplay::init() {
     tft.fillScreen(M314_BLACK);
     tft.setRotation(3);
     img.setColorDepth(COLOR_DEPTH);
+//    fbb.setColorDepth(COLOR_DEPTH);
 
     /* create sprite */
     sprPtr0 = (uint16_t*)img.createSprite(WIDTH, HEIGHT);
+//    fbbPtr = (uint16_t*)img.createSprite(WIDTH, HEIGHT);
 
     /* hold CS low for maximum effect */
     tft.startWrite();
@@ -44,11 +49,17 @@ void TrackerDisplay::init() {
     //scan_index = 0;
     ui_current_zoom = 5.0;
 
+    /* clear background */
+    img.fillRect(0, 0, img.width(), img.height(), M314_BLACK);
+    tft.pushImage(0, 0, tft.width(), tft.height(), sprPtr0);
+
     trigger_power_on();
     
-    draw_test_card();
-    tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
-    delay(1000);    
+    img.fillRect(0, 0, img.width(), img.height(), M314_BLACK);
+    tft.pushImage(0, 0, tft.width(), tft.height(), sprPtr0);
+    
+    delay(800);   
+    draw_company_logo(); 
 }
 
 
@@ -79,21 +90,16 @@ void TrackerDisplay::framebuffer_clear() {
 
 
 void TrackerDisplay::refresh() {
-
-    /* push framebuffer using DMA */
-    //tft.pushImage(0, 0, tft.width(), tft.height(), sprPtr0);
-    //tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr1);
-
-    /* draw a test pattern while debugging analog video routines */
-    draw_test_card();
-
+    //Serial.println("refresh");
+    Serial.println(analogRead(A4) * analogRead(A5));
+    
     /* trigger horizontal warp */
-    if (random(1000) > 990) {
-        expire_hori_warp = millis() + random(100);
+    if ((millis() > expire_hori_warp) && (random(1000) > 940))  {
+        expire_hori_warp = millis() + random(40);
     }
 
     /* trigger vertical scroll */
-    if ((millis() > expire_vert_scroll) && (random(1000) > 998)) {
+    if ((millis() > expire_vert_scroll) && (random(1000) > 988)) {
         expire_vert_scroll = millis() + random(400);
         glitch_vert = 0;
         glitch_vert_speed = random(16);
@@ -102,32 +108,42 @@ void TrackerDisplay::refresh() {
     /* do horizontal warp if true */
     if ( millis() < expire_hori_warp) {
         glitch_hori_warp(&tft, sprPtr0);
-
+        
     /* do vertical scroll if true */
     } else if ( millis() < expire_vert_scroll) {
         glitch_vert+=glitch_vert_speed;
         glitch_vert_scroll(&tft, sprPtr0, glitch_vert);
-
+           
     /* else be boring */
     } else {
-        tft.pushImageDMA(0, 0, tft.width(), tft.height(), sprPtr0);
+        glitch_chrom_noise(&tft, sprPtr0, analogRead(A4)*analogRead(A5)/300000.0);
     }
 
-    /* simulate a power off every minute */
+    /* simulate a power off every minute for debugging*/
     if ((millis() % 60000) < 100) {
         glitch_power_off(&tft, sprPtr0);
     }
 
     /* and a power on 3 seconds later */
-    if ((millis()-3000 % 60000) < 200){
+    if ((24000 < millis()) && (millis()-3000 % 60000) < 200){
         trigger_power_on();
     }
 }
 
+
+
+void TrackerDisplay::hold(int duration) {
+  for (int count = 0; count < duration / 3; count++) {
+    refresh();
+  }
+}
+
+
 /* graphics effects */
 void TrackerDisplay::trigger_power_on() {
+    Serial.println("power_on");
     draw_test_card();
-    for (glitch_vert = 0;glitch_vert<60;glitch_vert++) {
+    for (glitch_vert = 0;glitch_vert<120;glitch_vert++) {
         glitch_vert_scroll(&tft, sprPtr0, glitch_vert);
         glitch_vert += ((millis() % 18) / 16) + (32 * (tft.height() - (glitch_vert % tft.height())) / tft.height());
 
@@ -217,6 +233,170 @@ void TrackerDisplay::draw_test_card() {
   img.fillRect(114 + 8, 96, 8, 31, 0x1082);
   img.fillRect(114 + 16, 96, 7, 31, 0x18E3);
   img.fillRect(114 + 23, 96, 23, 31, 0x1082);
+}
+
+void TrackerDisplay::draw_company_logo() {
+    int x, y, w = tft.width(), h = tft.height();
+    float rotation_angle_rad;     /* zero is right, PI/2 is down */ 
+    int rot_throttle = 30;         /* logo animation delay */
+    const float UP_ANGLE = -PI/2;
+    const char LOGO_HEIGHT = 32;
+    const char LOGO_THICC = 18;
+    const int LOGO_TOP = (tft.height() - LOGO_HEIGHT) / 2;
+    const int LOGO_BOT = 1 + (tft.height() + LOGO_HEIGHT) / 2;
+  
+    img.fillSprite(M314_BLACK);
+    Coordinates point0, point1, point2, point3, point4, point5 = Coordinates();
+
+    point0.setCartesian((w / 2) - (LOGO_THICC / 2) - 1, LOGO_BOT);
+    point1.setCartesian((w / 2) + (LOGO_THICC / 2), LOGO_BOT);
+
+    /* draw the Weyland "W" procedurally... */
+
+    /* draw the initial "V", starting with a vertical rectangle */
+    for (rotation_angle_rad = 0; rotation_angle_rad <= (PI/4 + PI/64); rotation_angle_rad += PI/128) {
+        /* clear background */
+        img.fillRect(0, 0, img.width(), img.height(), M314_BLACK);
+
+        /* draw initial vertical block */
+        point2.fromPolar(LOGO_HEIGHT+8,UP_ANGLE + rotation_angle_rad, point0.getX(), point0.getY());
+        point3.fromPolar(LOGO_HEIGHT+8,UP_ANGLE + rotation_angle_rad, point1.getX(), point1.getY());
+        point4.fromPolar(LOGO_HEIGHT+8,UP_ANGLE - rotation_angle_rad + 0.01, point0.getX(), point0.getY());
+        point5.fromPolar(LOGO_HEIGHT+8,UP_ANGLE - rotation_angle_rad + 0.01, point1.getX(), point1.getY());
+        
+        img.fillTriangle(point0.getX(), point0.getY(), point1.getX(), point1.getY(), point2.getX(), point2.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX(), point1.getY(), point2.getX(), point2.getY(), point3.getX(), point3.getY(), WY_ORANGE);
+        img.fillTriangle(point0.getX() + 1, point0.getY(), point1.getX(), point1.getY(), point4.getX() + 1, point4.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX(), point1.getY(), point4.getX(), point4.getY(), point5.getX(), point5.getY(), WY_ORANGE);
+        
+        /* crop top and bottom */
+        img.fillRect(0, 0, w, LOGO_TOP+5, M314_BLACK);
+        img.fillRect(0, LOGO_BOT + 2, w, LOGO_TOP, M314_BLACK);
+
+        /* crop sides */
+        img.fillRect(0, 0, 46, img.height(), M314_BLACK);
+        img.fillRect(img.width() - 46, 0, 46, img.height(), M314_BLACK);
+
+        /* perform an atomic screen update */
+        refresh();
+        if ( !rotation_angle_rad ) {
+            for (int loop = 0; loop < 32; loop++) {
+                refresh();
+            }
+        } else {
+            hold(rot_throttle);
+            rot_throttle *= 0.92;
+        }
+    }
+
+    for (int loop = 0; loop < 24; loop++) {
+      refresh();
+    }
+    rot_throttle = 4;
+
+    /* clone the "V" and separate the two clones to form a "W" */
+    for (int translation = 0; translation < 29; translation++) {
+         /* clear background */
+        img.fillRect(0, 0, img.width(), img.height(), M314_BLACK);
+
+        /* right clone */
+        img.fillTriangle(point0.getX() + translation, point0.getY(), point1.getX() + translation, point1.getY(), point2.getX() + translation, point2.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX() + translation, point1.getY(), point2.getX() + translation, point2.getY(), point3.getX() + translation, point3.getY(), WY_ORANGE);
+        img.fillTriangle(point0.getX() + translation, point0.getY(), point1.getX() + translation, point1.getY(), point4.getX() + translation, point4.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX() + translation, point1.getY(), point4.getX() + translation, point4.getY(), point5.getX() + translation, point5.getY(), WY_ORANGE);
+        img.fillTriangle(point4.getX() + translation, point4.getY(), point4.getX() + translation, point4.getY() + 14, point4.getX() + translation + 14, point4.getY(), M314_BLACK);
+        img.drawPixel(point0.getX() + translation - 1, point0.getY(), WY_ORANGE);
+        /* left clone */
+        img.fillTriangle(point0.getX() - translation + 2, point0.getY(), point1.getX() - translation + 2, point1.getY(), point2.getX() - translation + 2, point2.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX() - translation + 2, point1.getY(), point2.getX() - translation + 2, point2.getY(), point3.getX() - translation + 2, point3.getY(), WY_ORANGE);
+        img.fillTriangle(point0.getX() - translation + 2, point0.getY(), point1.getX() - translation + 2, point1.getY(), point4.getX() - translation + 2, point4.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX() - translation + 2, point1.getY(), point4.getX() - translation + 2, point4.getY(), point5.getX() - translation + 2, point5.getY(), WY_ORANGE);
+        img.drawPixel(point0.getX() - translation + 1, point0.getY(), WY_ORANGE);
+        if (22 > translation) {
+            img.fillTriangle(point3.getX() - translation + 2, point3.getY(), point3.getX() - translation - 3, point3.getY() + 9, point3.getX() - translation - 14 + 2, point3.getY(), M314_BLACK);
+            img.fillTriangle(point0.getX() + translation + 2, point0.getY(), point1.getX() + translation + 2, point1.getY(), point2.getX() + translation + 2, point2.getY(), WY_ORANGE);
+            img.fillTriangle(point1.getX() + translation + 2, point1.getY(), point2.getX() + translation + 2, point2.getY(), point3.getX() + translation + 2, point3.getY(), WY_ORANGE);
+        } else {
+            img.fillTriangle(point5.getX() + 15 + translation, point5.getY(), point5.getX() + 15 + translation, point5.getY() + 14, point5.getX() + 15 + translation - 14, point5.getY(), M314_BLACK);
+        }
+        /* crop top and bottom */
+        img.fillRect(0, 0, w, LOGO_TOP, M314_BLACK);
+        img.fillRect(0, LOGO_BOT + 1, w, LOGO_TOP, M314_BLACK);
+
+        /* crop sides */
+        img.fillRect(0, 0, (46 - translation), img.height(), M314_BLACK);
+        img.fillRect(img.width() - (46 - translation), 0, (46 - translation), img.height(), M314_BLACK); 
+
+        /* perform an atomic screen update */
+        refresh();
+        hold(rot_throttle);
+        rot_throttle *= 1.11;
+    }
+    for (int loop = 0; loop < 24; loop++) {
+      refresh();
+    }
+    
+    rot_throttle = 50;
+
+    /* draw Yutani chevrons */
+    for (int offset = -15; offset < 0; offset++) {
+        int translation = 28;
+
+        img.fillRect(0, 0, img.width(), img.height(), M314_BLACK);
+        img.fillTriangle(80, 69 + offset, 71, 78 + offset, 89, 78 + offset, M314_WHITE);
+        img.fillRect(71, 78 + offset, 19, 4, M314_WHITE);
+
+        img.fillTriangle (53, 66 - offset, 44, 57 - offset, 62, 57 - offset, M314_WHITE); 
+        img.fillRect(44, 53 - offset, 16, 4, M314_WHITE);
+        img.fillTriangle(60, 53 - offset, 60, 56 - offset, 63, 56 - offset, M314_WHITE);
+
+        img.fillTriangle (107, 66 - offset, 98, 57 - offset, 116, 57 - offset, M314_WHITE);
+        img.fillRect(101, 53 - offset, 16, 4, M314_WHITE);
+        img.fillTriangle(97, 56 - offset, 100, 56 - offset, 100, 53 - offset, M314_WHITE);
+
+        /* redraw Weyland "W" */
+        /* right clone */
+        img.fillTriangle(point0.getX() + translation, point0.getY(), point1.getX() + translation, point1.getY(), point2.getX() + translation, point2.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX() + translation, point1.getY(), point2.getX() + translation, point2.getY(), point3.getX() + translation, point3.getY(), WY_ORANGE);
+        img.fillTriangle(point0.getX() + translation, point0.getY(), point1.getX() + translation, point1.getY(), point4.getX() + translation, point4.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX() + translation, point1.getY(), point4.getX() + translation, point4.getY(), point5.getX() + translation, point5.getY(), WY_ORANGE);
+        img.fillTriangle(point4.getX() + translation, point4.getY(), point4.getX() + translation, point4.getY() + 14, point4.getX() + translation + 14, point4.getY(), M314_BLACK);
+        img.drawPixel(point0.getX() + translation - 1, point0.getY(), WY_ORANGE);
+        /* left clone */
+        img.fillTriangle(point0.getX() - translation + 2, point0.getY(), point1.getX() - translation + 2, point1.getY(), point2.getX() - translation + 2, point2.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX() - translation + 2, point1.getY(), point2.getX() - translation + 2, point2.getY(), point3.getX() - translation + 2, point3.getY(), WY_ORANGE);
+        img.fillTriangle(point0.getX() - translation + 2, point0.getY(), point1.getX() - translation + 2, point1.getY(), point4.getX() - translation + 2, point4.getY(), WY_ORANGE);
+        img.fillTriangle(point1.getX() - translation + 2, point1.getY(), point4.getX() - translation + 2, point4.getY(), point5.getX() - translation + 2, point5.getY(), WY_ORANGE);
+        img.drawPixel(point0.getX() - translation + 1, point0.getY(), WY_ORANGE);
+        img.fillTriangle(point5.getX() + translation + 5, point5.getY(), point5.getX() + translation + 5, point5.getY() + 4, point5.getX() + translation - 4 + 5, point5.getY(), M314_BLACK);
+        /* crop top and bottom */
+        img.fillRect(0, 0, w, LOGO_TOP, M314_BLACK);
+        img.fillRect(0, LOGO_BOT + 1, w, LOGO_TOP, M314_BLACK);
+
+        /* crop sides */
+        img.fillRect(0, 0, (46 - translation), img.height(), M314_BLACK);
+        img.fillRect(img.width() - (46 - translation), 0, (46 - translation), img.height(), M314_BLACK);         
+
+        /* perform an atomic screen update */
+        refresh();
+        hold(rot_throttle);
+        rot_throttle *= .80;
+    }
+
+    /* add text */
+    img.setTextSize(2);
+    img.setTextColor(M314_WHITE);
+    img.setCursor(4, 45);
+    img.setFreeFont(&Picopixel);
+    img.print("WEYLAND-YUTANI CORP"); 
+    
+    img.setTextSize(1);
+    img.setCursor(39, 92);
+    img.print("BUILDING BETTER WORLDS"); 
+      
+    for (int count = 0; count < 256; count++) {
+      refresh();
+    }
 }
 
 

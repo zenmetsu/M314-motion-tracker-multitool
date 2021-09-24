@@ -4,6 +4,11 @@ Coordinates::Coordinates(float x, float y) {
     fromCartesian(x, y); 
 }
 
+void Coordinates::setCartesian(float x, float y) {
+    this->x = x;
+    this->y = y;  
+}
+
 void Coordinates::fromCartesian(float x, float y) {
     this->x = x;
     this->y = y;
@@ -36,4 +41,11 @@ void Coordinates::fromPolar(float r, float phi) {
     this->phi = phi;
     this->x = r * cos(phi);
     this->y = r * sin(phi);
+}
+
+void Coordinates::fromPolar(float r, float phi, float x_off, float y_off) {
+    this->r = r;
+    this->phi = phi;
+    this->x = r * cos(phi) + x_off;
+    this->y = r * sin(phi) + y_off;
 }

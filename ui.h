@@ -23,6 +23,7 @@ class TrackerDisplay {
         /* framebuffer control */
         void framebuffer_clear();
         void refresh();
+        void hold(int duration);
 
         /* graphics effects */
         void trigger_power_on();
@@ -55,6 +56,7 @@ class TrackerDisplay {
         void update_zoom(float ratio);
 
         void draw_test_card();
+        void draw_company_logo();
         
         void draw_sonar_ui();
         void draw_sonar_compass();
@@ -73,6 +75,8 @@ class TrackerDisplay {
         static const int M314_ORANGE = 0xFC00;
         static const int M314_RED    = 0xF800;
         static const int M314_WHITE  = 0xFFFF;
+
+        static const int WY_ORANGE   = 0xF6AA;
 
 
 

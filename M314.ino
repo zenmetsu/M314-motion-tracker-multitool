@@ -71,6 +71,8 @@ void setup() {
     delay(200);
     Serial.begin(115200);
     Serial.println();
+
+    randomSeed(analogRead(A4) * analogRead(A5));
   
     /* bind the RPLIDAR driver to the arduino hardware serial */
     lidar.begin(Serial1);
@@ -103,6 +105,7 @@ void loop() {
         //Serial.print(millis() - g_last_refresh);
         //Serial.print(", ");
         //Serial.println(millis());
+        display.draw_test_card();
         display.refresh();
         g_last_refresh = millis();
         //tone(BUZZER, 11000, 20);

@@ -10,7 +10,9 @@ class Coordinates {
         /* start value, start speed, update confidence, evolution confidence */
         Coordinates(float x = 0, float y = 0);
         void fromCartesian(float x, float y);
+        void setCartesian(float x, float y);
         void fromPolar(float r, float phi);
+        void fromPolar(float r, float phi, float x_off, float y_off);
 
         float getR() {
           return r;
