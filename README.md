@@ -112,13 +112,18 @@ Figure it out... it's an Arduino project FFS...
 
 See the [open issues](https://github.com/zenmetsu/M314-motion-tracker-multitool/issues) for a list of proposed features (and known issues).
 
-Currently, I am working on the user interface and basic input/output systems.  
+Currently: 
+* []() working on the user interface and basic input/output systems.
+* []() 3D printing first iteration of the chassis.
+* []() emulating analog CRT effects for LCD display (need to add chroma delay, chroma noise, and ringing)
 
-I have a 16-key SPI keypad which will be integrated with the device as well.  
-
-Once my 3D Printer is back online, I will print up the casing that I modeled in Blender.  Pending confirmation that the .stl files are adequate, I will post them in this repo.
-
-Additionally, I plan on adding a USB-C charging port, an internal 1000mAH LiPo 1S pack to power the unit when the main battery, a 2200mAH 3S pack, is removed during a battery swap.
+To do:
+* []() Add user interface graphics / menu system.
+* []() Add boot/initialization animation.
+* []() Add audio effects.
+* []() I have a 16-key SPI keypad which will be integrated with the device as well.  
+* []() ~Once my 3D Printer is back online, I will print up the casing that I modeled in Blender.~  Pending confirmation that the .stl files are adequate, I will post them in this repo.
+* []() I plan on adding a USB-C charging port, an internal 1000mAH LiPo 1S pack to power the unit when the main battery, a 2200mAH 3S pack, is removed during a battery swap.
 
 <!-- CONTRIBUTING -->
 ## Contributing
