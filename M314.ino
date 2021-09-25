@@ -29,7 +29,7 @@
 
 
 /* GLOBAL CONSTANTS */
-const int MIN_CYCLE_TIME_MS = 33; /* minimum time in milliseconds between new scan events */
+const int MIN_CYCLE_TIME_MS = 10; /* minimum time in milliseconds between new scan events */
 
 
 

@@ -57,6 +57,12 @@ class TrackerDisplay {
 
         void draw_test_card();
         void draw_company_logo();
+
+        void draw_menu_bg();
+        void draw_menu_uscm_logo();
+        void pop_menu_text();
+        void spawn_menu_text();
+        void boot_up();
         
         void draw_sonar_ui();
         void draw_sonar_compass();
@@ -70,10 +76,13 @@ class TrackerDisplay {
         void switch_mode(ui_modes mode);
 
         static const int M314_BLACK  = 0x0000;
-        static const int M314_BLUE   = 0x03EC;
+        static const int M314_BLUE   = 0x4A59;
+        static const int M314_NAVY   = 0x1008;
         static const int M314_LTBLUE = 0x03EC;
+        static const int M314_AMBER  = 0xF6AA;
         static const int M314_ORANGE = 0xFC00;
         static const int M314_RED    = 0xF800;
+        static const int M314_LTGREY = 0xC618;
         static const int M314_WHITE  = 0xFFFF;
 
         static const int WY_ORANGE   = 0xF6AA;

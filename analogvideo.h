@@ -25,6 +25,8 @@ void glitch_hori_warp(TFT_eSPI *tft, uint16_t *fb);
 void glitch_chrom_noise(TFT_eSPI *tft, uint16_t *fb, float chroma_noise);
 void glitch_chrom_noise(uint16_t *fb_temp, uint16_t *fb, int w, int h, float chroma_noise);
 
+void glitch_ringing(uint16_t *fb, int w, int h, char ringing_strength, char ringing_delay);
+
 void glitch_power_off(TFT_eSPI *tft, uint16_t *fb);
 
 yiqcolor_t rgb2yiq(uint16_t rgb);

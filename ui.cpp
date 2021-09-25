@@ -2,6 +2,10 @@
 #include "ui.h"
 #include "analogvideo.h"
 #include "Picopixel.h"
+#include "Font4x7Fixed.h"
+#include "Orbitron_Medium_20.h"
+#include "Orbitron_Medium_8.h"
+#include "Orbitron_Medium_7.h"
 #include "coordinates.h"
 
 
@@ -26,6 +30,10 @@ int glitch_vert,glitch_hori,glitch_vert_speed = 0;
 int chrom_noise = 0;
 int ring_level = 0;
 
+const char * SysSubmenu[] = { "CALIBRATE", "EQUALIZE", "TRACK" };
+const char * SpectralSubmenu[] = { "BIO", "INERT" };
+const char * IFFSubmenu[] = { "SEARCH", "TEST", "ENGAGED", "INTER-TE" };
+const char * TargetSubmenu[] = { "SOFT", "MEDIUM", "HARD" };
 
 TrackerDisplay::TrackerDisplay() {
 }
@@ -58,8 +66,10 @@ void TrackerDisplay::init() {
     img.fillRect(0, 0, img.width(), img.height(), M314_BLACK);
     tft.pushImage(0, 0, tft.width(), tft.height(), sprPtr0);
     
-    delay(800);   
-    draw_company_logo(); 
+    hold(80);   
+    draw_company_logo();
+    boot_up();
+    hold(1800);
 }
 
 
@@ -90,8 +100,6 @@ void TrackerDisplay::framebuffer_clear() {
 
 
 void TrackerDisplay::refresh() {
-    //Serial.println("refresh");
-    Serial.println(analogRead(A4) * analogRead(A5));
     
     /* trigger horizontal warp */
     if ((millis() > expire_hori_warp) && (random(1000) > 940))  {
@@ -116,7 +124,11 @@ void TrackerDisplay::refresh() {
            
     /* else be boring */
     } else {
-        glitch_chrom_noise(&tft, sprPtr0, analogRead(A4)*analogRead(A5)/300000.0);
+        uint16_t fb_temp[HEIGHT * WIDTH];
+        memcpy(fb_temp, sprPtr0, HEIGHT*WIDTH*sizeof(fb_temp[0]));
+        glitch_ringing(fb_temp, WIDTH, HEIGHT, 64, 3);
+
+        glitch_chrom_noise(&tft, fb_temp, analogRead(A4)*analogRead(A5)/300000.0);
     }
 
     /* simulate a power off every minute for debugging*/
@@ -188,6 +200,9 @@ void TrackerDisplay::update_zoom(float ratio) {
 }
 
 
+
+/* draw an NTSC test pattern */
+/* NTSC = Never Twice Same Color XD */
 void TrackerDisplay::draw_test_card() {
   int column,row = 0;
   img.fillRect(0 + (23*column), 0, 23, 85, 0xC618);
@@ -339,7 +354,7 @@ void TrackerDisplay::draw_company_logo() {
     rot_throttle = 50;
 
     /* draw Yutani chevrons */
-    for (int offset = -15; offset < 0; offset++) {
+    for (int offset = -15; offset < 1; offset++) {
         int translation = 28;
 
         img.fillRect(0, 0, img.width(), img.height(), M314_BLACK);
@@ -384,19 +399,456 @@ void TrackerDisplay::draw_company_logo() {
     }
 
     /* add text */
-    img.setTextSize(2);
-    img.setTextColor(M314_WHITE);
-    img.setCursor(4, 45);
-    img.setFreeFont(&Picopixel);
-    img.print("WEYLAND-YUTANI CORP"); 
-    
     img.setTextSize(1);
-    img.setCursor(39, 92);
+    img.setTextColor(M314_WHITE);
+    img.setCursor(13, 49);
+    //img.setFreeFont(&Picopixel);
+    img.setFreeFont(&Orbitron_Medium_8);
+    img.print("WEYLAND-YUTANI CORP"); 
+
+    img.setFreeFont(&Orbitron_Medium_7);
+    img.setTextSize(1);
+    img.setCursor(14, 90);
     img.print("BUILDING BETTER WORLDS"); 
       
     for (int count = 0; count < 256; count++) {
       refresh();
     }
+}
+
+
+
+void TrackerDisplay::draw_menu_bg(){
+    img.fillRect(0, 0, img.width(), img.height(), M314_BLUE);
+    img.fillRect(1, 38, 35, 17, M314_BLACK);
+    img.fillRect(39, 38, 39, 17, M314_BLACK);
+    img.fillRect(81, 38, 39, 17, M314_BLACK);
+    img.fillRect(123, 38, 36, 17, M314_BLACK);
+
+    img.fillRect(1, 58, 35, 33, M314_BLACK);
+    img.fillRect(39, 58, 39, 33, M314_BLACK);
+    img.fillRect(81, 58, 39, 33, M314_BLACK);
+    img.fillRect(123, 58, 36, 33, M314_BLACK);
+
+    img.fillRect(1, 94, 158, 33, M314_BLACK);  
+}
+
+
+
+
+void TrackerDisplay::draw_menu_uscm_logo(){
+    int xpos, ypos;
+    int stars_x[4] = {17, 15, 29, 31};
+    int stars_y[4] = {13, 18, 13, 18};  
+
+    /* draw circular field */
+    img.fillCircle(23, 18, 17, WY_ORANGE);
+    img.fillCircle(23, 18, 15, M314_NAVY);
+    img.drawCircle(23, 18, 12, WY_ORANGE);
+
+    /* draw stars */
+    for (int star_num=0; star_num < 4; star_num++) {
+        xpos = stars_x[star_num];
+        ypos = stars_y[star_num];
+        img.drawPixel(xpos  , ypos  , M314_LTGREY);
+        img.drawPixel(xpos  , ypos-1, M314_LTGREY);
+        img.drawPixel(xpos  , ypos+1, M314_LTGREY);
+        img.drawPixel(xpos-1, ypos+1, M314_LTGREY);
+        img.drawPixel(xpos+1, ypos+1, M314_LTGREY);
+        img.drawPixel(xpos-1, ypos+2, M314_LTGREY);
+        img.drawPixel(xpos+1, ypos+2, M314_LTGREY);
+        img.drawPixel(xpos-2, ypos  , M314_LTGREY);
+        img.drawPixel(xpos-1, ypos  , M314_LTGREY);
+        img.drawPixel(xpos+1, ypos  , M314_LTGREY);
+        img.drawPixel(xpos+2, ypos  , M314_LTGREY);
+    }  
+
+    /* draw stripes */
+    img.drawFastVLine(20, 7, 15, M314_LTGREY);
+    img.drawFastVLine(21, 7, 15, M314_RED);
+    img.drawFastVLine(22, 7, 15, M314_LTGREY);
+    img.drawFastVLine(23, 7, 15, M314_RED);
+    img.drawFastVLine(24, 7, 15, M314_LTGREY);
+    img.drawFastVLine(25, 7, 15, M314_RED);
+    img.drawFastVLine(26, 7, 15, M314_LTGREY);
+
+    img.drawFastVLine(19, 22, 4, M314_LTGREY);
+    img.drawFastVLine(20, 22, 5, M314_RED);
+    img.drawFastVLine(21, 22, 8, M314_LTGREY);
+    img.fillRect(22, 22, 3, 8, M314_RED);
+    img.drawFastVLine(25, 22, 8, M314_LTGREY);
+    img.drawFastVLine(26, 22, 5, M314_RED);
+    img.drawFastVLine(27, 22, 4, M314_LTGREY);
+
+    img.fillRect(16, 27, 2, 1, M314_LTGREY);
+    img.fillRect(18, 27, 2, 2, M314_RED);
+    img.fillRect(20, 27, 2, 3, M314_LTGREY);
+    img.fillRect(25, 27, 2, 3, M314_LTGREY);
+    img.fillRect(27, 27, 2, 2, M314_RED);
+    img.fillRect(29, 27, 2, 1, M314_LTGREY);
+
+    img.drawPixel(18, 25, M314_LTGREY);
+    img.drawPixel(28, 25, M314_LTGREY);
+    img.drawPixel(17, 26, M314_LTGREY);
+    img.drawPixel(18, 26, M314_LTGREY);  
+    img.drawPixel(28, 26, M314_LTGREY);
+    img.drawPixel(29, 26, M314_LTGREY);
+    img.drawPixel(19, 26, M314_RED);
+    img.drawPixel(27, 26, M314_RED);    
+}
+
+
+
+void TrackerDisplay::pop_menu_text() {
+    int xpos, ypos;
+
+    img.setTextDatum(TC_DATUM);
+    img.setTextSize(1);
+    img.setTextColor(0xC618);
+    img.setFreeFont(&Orbitron_Medium_20);
+    img.drawString("U.S.C.M.", 100, 6, 1);
+
+    xpos = 18;
+    ypos = 40;
+    img.setTextSize(1);
+    img.setTextColor(M314_AMBER);
+    img.setFreeFont(&Picopixel);
+    img.drawString("SYSTEM", xpos, ypos, 1);
+    xpos = 59;
+    img.drawString("SPECTRAL", xpos, ypos, 1);
+    xpos = 100;
+    img.drawString("IFF", xpos, ypos, 1); 
+    xpos = 141;
+    img.drawString("TARGET", xpos, ypos, 1);
+
+    xpos = 18;
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1);
+    xpos = 59;
+    img.drawString("PROFILE", xpos, ypos, 1);
+    xpos = 100;
+    img.drawString("PROFILE", xpos, ypos, 1); 
+    xpos = 141;
+    img.drawString("PROFILE", xpos, ypos, 1);    
+
+    xpos = 18;
+    ypos = 60;
+    img.drawString("CALIBRATE", xpos, ypos, 1);
+    xpos = 59;
+    img.drawString("BIO", xpos, ypos, 1);
+    xpos = 100;
+    img.drawString("SEARCH", xpos, ypos, 1); 
+    xpos = 141;
+    img.drawString("SOFT", xpos, ypos, 1); 
+
+    xpos = 18;
+    ypos += tft.fontHeight(1);
+    img.drawString("EQUALIZE", xpos, ypos, 1);
+    xpos = 59;
+    img.drawString("INERT", xpos, ypos, 1);
+    xpos = 100;
+    img.drawString("TEST", xpos, ypos, 1); 
+    xpos = 141;
+    img.drawString("MEDIUM", xpos, ypos, 1); 
+
+    xpos = 18;
+    ypos += tft.fontHeight(1);
+    img.drawString("TRACK", xpos, ypos, 1);
+    xpos = 59;
+    img.drawString("", xpos, ypos, 1);
+    xpos = 100;
+    img.drawString("ENGAGED", xpos, ypos, 1); 
+    xpos = 141;
+    img.drawString("HARD", xpos, ypos, 1);   
+
+    xpos = 18;
+    ypos += tft.fontHeight(1);
+    img.drawString("", xpos, ypos, 1);
+    xpos = 59;
+    img.drawString("", xpos, ypos, 1);
+    xpos = 100;
+    img.drawString("INTER-TE", xpos, ypos, 1); 
+    xpos = 141;
+    img.drawString("", xpos, ypos, 1);  
+
+
+    /*  TODO
+     *  add sprite for the lower panel
+     *  and add scrolling status update
+     *  text as system loads, ending
+     *  with system name and operator info
+     */
+    img.fillRect(1, 94, 158, 33, M314_BLACK);
+    img.setFreeFont(&Font4x7Fixed);
+    img.setCursor(7,105);
+    img.print("USCM - M314 MOBILE TRACKING UNIT");
+    
+    img.setCursor(7, 114);
+    img.setFreeFont(&Picopixel);
+    img.print("OPERATOR: HICKS,D. - A27/TQ4.0.48215E9");     
+}
+
+
+
+void TrackerDisplay::spawn_menu_text() {
+    char sel;
+    int xpos, ypos;
+    int hold1 = 20;
+    int hold2 = 6;
+    
+
+    img.setTextDatum(TC_DATUM);
+    img.setTextSize(1);
+    img.setTextColor(0xC618);
+    img.setFreeFont(&Orbitron_Medium_20);
+    img.drawString("U.S.C.M.", 100, 6, 1);
+
+    img.setTextColor(M314_AMBER);
+    img.setFreeFont(&Font4x7Fixed);
+    img.setCursor(7,105);
+    img.print("AUTOCONFIG  IN  PROGRESS...");
+
+    xpos = 18;
+    ypos = 40;
+    img.setTextSize(1);
+    img.setTextColor(M314_AMBER);
+    img.setFreeFont(&Picopixel);
+    img.drawString("SYSTEM", xpos, ypos, 1);
+    hold(hold1);
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1);
+    hold(hold1);
+    
+    ypos = 40;
+    xpos = 59;
+    img.drawString("SPECTRAL", xpos, ypos, 1);
+    hold(hold1);
+    ypos += tft.fontHeight(1);
+    img.drawString("PROFILE", xpos, ypos, 1);
+    hold(hold1);
+
+    ypos = 40;
+    xpos = 100;
+    img.drawString("IFF", xpos, ypos, 1);
+    hold(hold1);
+    ypos += tft.fontHeight(1);
+    img.drawString("PROFILE", xpos, ypos, 1);
+    hold(hold1);
+
+    ypos = 40;
+    xpos = 141;
+    img.drawString("TARGET", xpos, ypos, 1);
+    hold(hold1);
+    ypos += tft.fontHeight(1);
+    img.drawString("PROFILE", xpos, ypos, 1);
+    hold(hold1);
+
+
+
+    /* menu boxes for reference
+    img.fillRect(1, 38, 35, 17, M314_BLACK);
+    img.fillRect(39, 38, 39, 17, M314_BLACK);
+    img.fillRect(81, 38, 39, 17, M314_BLACK);
+    img.fillRect(123, 38, 36, 17, M314_BLACK);
+
+    img.fillRect(1, 58, 35, 33, M314_BLACK);
+    img.fillRect(39, 58, 39, 33, M314_BLACK);
+    img.fillRect(81, 58, 39, 33, M314_BLACK);
+    img.fillRect(123, 58, 36, 33, M314_BLACK);
+    */
+
+    /* populate system menu */
+    img.fillRect(1, 38, 35, 17, M314_AMBER);
+    xpos = 18;
+    ypos = 40;
+    img.setTextColor(M314_BLACK);
+    img.drawString("SYSTEM", xpos, ypos, 1);
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1);
+    hold(hold1);
+
+
+    /* system submenu */
+    ypos = 60;
+    xpos = 18;
+    img.setTextColor(M314_AMBER);
+    for (char entry = 0; entry < sizeof(SysSubmenu)/sizeof(SysSubmenu[0]); entry++) {
+        img.drawString(SysSubmenu[entry], xpos, ypos, 1);
+        hold(hold2);
+        ypos += tft.fontHeight(1);
+    }    
+
+    /* cycle through system menu */
+    ypos = 60;
+    sel = 2;
+    for (char entry = 0; entry < min((char)(sizeof(SysSubmenu)/sizeof(SysSubmenu[0])), (char)(sel+1)); entry++) {
+        img.setTextColor(M314_BLACK);
+        img.fillRect(1, ypos-2, 35, tft.fontHeight(1), M314_AMBER);
+        img.drawString(SysSubmenu[entry], xpos, ypos, 1);
+        hold(hold1);
+        Serial.printf("%i, %i\r\n", entry, sizeof(SysSubmenu)/sizeof(SysSubmenu[0]));
+        if ( entry != sel ) {
+            img.setTextColor(M314_AMBER);
+            img.fillRect(1, ypos-2, 35, tft.fontHeight(1), M314_BLACK);
+            img.drawString(SysSubmenu[entry], xpos, ypos, 1);
+            ypos += tft.fontHeight(1);
+        }
+    }
+
+    /* spectral submenu */
+    img.fillRect(1, 38, 35, 17, M314_BLACK);
+    xpos = 18;
+    ypos = 40;
+    img.setTextColor(M314_AMBER);
+    img.drawString("SYSTEM", xpos, ypos, 1);
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1);
+    img.fillRect(39, 38, 39, 17, M314_AMBER);
+    xpos = 59;
+    ypos = 40;
+    img.setTextColor(M314_BLACK);
+    img.drawString("SPECTRAL", xpos, ypos, 1);
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1);    
+    
+    ypos = 60;
+    xpos = 59;
+    img.setTextColor(M314_AMBER);
+    for (char entry = 0; entry < sizeof(SpectralSubmenu)/sizeof(SpectralSubmenu[0]); entry++) {
+        img.drawString(SpectralSubmenu[entry], xpos, ypos, 1);
+        hold(hold2);
+        ypos += tft.fontHeight(1);
+    }
+
+    /* cycle through spectral menu */
+    ypos = 60; 
+    sel = 0;
+    for (char entry = 0; entry < min((char)(sizeof(SpectralSubmenu)/sizeof(SpectralSubmenu[0])), (char)(sel+1)); entry++) {
+        img.setTextColor(M314_BLACK);
+        img.fillRect(39, ypos-2, 39, tft.fontHeight(1), M314_AMBER);
+        img.drawString(SpectralSubmenu[entry], xpos, ypos, 1);
+        hold(hold1);
+        if ( entry != sel ) {
+            img.setTextColor(M314_AMBER);
+            img.fillRect(39, ypos-2, 39, tft.fontHeight(1), M314_BLACK);
+            img.drawString(SpectralSubmenu[entry], xpos, ypos, 1);
+            ypos += tft.fontHeight(1);
+        }
+    }
+
+    /* IFF submenu */
+    img.fillRect(39, 38, 39, 17, M314_BLACK);
+    xpos = 59;
+    ypos = 40;
+    img.setTextColor(M314_AMBER);
+    img.drawString("SPECTRAL", xpos, ypos, 1);
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1);
+    img.fillRect(81, 38, 39, 17, M314_AMBER);
+    xpos = 100;
+    ypos = 40;
+    img.setTextColor(M314_BLACK);
+    img.drawString("IFF", xpos, ypos, 1);
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1); 
+    
+    ypos = 60;
+    xpos = 100;
+    img.setTextColor(M314_AMBER);
+    for (char entry = 0; entry < sizeof(IFFSubmenu)/sizeof(IFFSubmenu[0]); entry++) {
+        img.drawString(IFFSubmenu[entry], xpos, ypos, 1);
+        hold(hold2);
+        ypos += tft.fontHeight(1);
+    }
+
+    /* cycle through IFF menu */
+    ypos = 60;
+    sel = 0; 
+    for (char entry = 0; entry < min((char)(sizeof(IFFSubmenu)/sizeof(IFFSubmenu[0])), (char)(sel+1)); entry++) {
+        img.setTextColor(M314_BLACK);
+        img.fillRect(81, ypos-2, 39, tft.fontHeight(1), M314_AMBER);
+        img.drawString(IFFSubmenu[entry], xpos, ypos, 1);
+        hold(hold1);
+        if ( entry != sel ) {
+            img.setTextColor(M314_AMBER);
+            img.fillRect(81, ypos-2, 39, tft.fontHeight(1), M314_BLACK);
+            img.drawString(IFFSubmenu[entry], xpos, ypos, 1);
+            ypos += tft.fontHeight(1);
+        }
+    }
+
+    /* target submenu */
+    img.fillRect(81, 38, 39, 17, M314_BLACK);
+    xpos = 100;
+    ypos = 40;
+    img.setTextColor(M314_AMBER);
+    img.drawString("IFF", xpos, ypos, 1);
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1);
+    img.fillRect(123, 38, 36, 17, M314_AMBER);
+    xpos = 141;
+    ypos = 40;
+    img.setTextColor(M314_BLACK);
+    img.drawString("TARGET", xpos, ypos, 1);
+    ypos += tft.fontHeight(1);
+    img.drawString("MODE", xpos, ypos, 1); 
+    
+    ypos = 60;
+    xpos = 140;
+    img.setTextColor(M314_AMBER);
+    for (char entry = 0; entry < sizeof(TargetSubmenu)/sizeof(TargetSubmenu[0]); entry++) {
+        img.drawString(TargetSubmenu[entry], xpos, ypos, 1);
+        hold(hold2);
+        ypos += tft.fontHeight(1);
+    }
+
+    /* cycle through target menu */
+    ypos = 60;
+    sel = 1;
+    for (char entry = 0; entry < min((char)(sizeof(TargetSubmenu)/sizeof(TargetSubmenu[0])), (char)(sel+1)); entry++) {
+        img.setTextColor(M314_BLACK);
+        img.fillRect(123, ypos-2, 36, tft.fontHeight(1), M314_AMBER);
+        img.drawString(TargetSubmenu[entry], xpos, ypos, 1);
+        hold(hold1);
+        if ( entry != sel ) {
+            img.setTextColor(M314_AMBER);
+            img.fillRect(123, ypos-2, 36, tft.fontHeight(1), M314_BLACK);
+            img.drawString(TargetSubmenu[entry], xpos, ypos, 1);
+            ypos += tft.fontHeight(1);
+        }
+    }      
+
+    
+    /*  TODO
+     *  add sprite for the lower panel
+     *  and add scrolling status update
+     *  text as system loads, ending
+     *  with system name and operator info
+     */
+    img.fillRect(1, 94, 158, 33, M314_BLACK);
+    img.setTextColor(M314_AMBER);
+    img.setFreeFont(&Font4x7Fixed);
+    img.setCursor(7,105);
+    img.print("USCM - M314 MOBILE TRACKING UNIT");
+    
+    img.setCursor(7, 114);
+    img.setFreeFont(&Picopixel);
+    img.print("OPERATOR: HICKS,D. - A27/TQ4.0.48215E9");     
+}
+
+
+
+void TrackerDisplay::boot_up() {
+    int xpos = 18;
+    int ypos = 40;
+    int stars_x[4] = {17, 15, 29, 31};
+    int stars_y[4] = {13, 18, 13, 18};
+
+    /* draw background */
+    draw_menu_bg();
+    draw_menu_uscm_logo();
+    
+    spawn_menu_text();   
 }
 
 

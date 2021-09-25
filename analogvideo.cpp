@@ -12,6 +12,7 @@ void glitch_vert_scroll(TFT_eSPI *tft, uint16_t *fb, int v_offset) {
     uint16_t fb_temp[h * w];
     
     glitch_chrom_noise(fb_temp, fb, w, h, 0.22);
+    glitch_ringing(fb_temp, w, h, 64, 3);
     tft->pushImage(0, 0, w, offset, fb_temp + w*(h - offset));
     tft->pushImage(0, offset, w, h - offset, fb_temp);
 }
@@ -33,8 +34,13 @@ void glitch_hori_warp(TFT_eSPI *tft, uint16_t *fb) {
     int w = tft->width();
     int glitched_w,glitched_hsync;
     int offset_x, offset_y, block, scanline = 0;
-
+    uint16_t fb_temp[h * w];
+    
+    //memcpy(fb_temp, fb, h*w*sizeof(fb_temp[0]));
+    //glitch_ringing(fb_temp, w, h, 128, 4);
+    
     glitch_chrom_noise(tft, fb, 0.22);
+    
     while (scanline < h) { 
         glitched_w = w + random(w/16);
         glitched_hsync = 10 - random(31);
@@ -95,7 +101,7 @@ void glitch_chrom_noise(TFT_eSPI *tft, uint16_t *fb, float chroma_noise) {
     memcpy(fb_temp, fb, h*w*sizeof(fb_temp[0]));
 
     int noise_y, noise_u, noise_v = 0;
-    for (int noise_pixels = 0; noise_pixels < 4096; noise_pixels++) {
+    for (int noise_pixels = 0; noise_pixels < 2048; noise_pixels++) {
         int pixelnum = random(h*w);     
         
         yiq = rgb2yiq_i(fb_temp[pixelnum]);
@@ -120,7 +126,7 @@ void glitch_chrom_noise(uint16_t *fb_temp, uint16_t *fb, int w, int h, float chr
 
     memcpy(fb_temp, fb, h*w*sizeof(fb_temp[0]));
     
-    for (int noise_pixels = 0; noise_pixels < 4096; noise_pixels++) {
+    for (int noise_pixels = 0; noise_pixels < 2048; noise_pixels++) {
         int pixelnum = random(h*w);     
         
         yiq = rgb2yiq_i(fb_temp[pixelnum]);
@@ -133,6 +139,25 @@ void glitch_chrom_noise(uint16_t *fb_temp, uint16_t *fb, int w, int h, float chr
         yiq.q = min(max(yiq.q + noise_v, -127), 127);
     
         fb_temp[pixelnum] = yiq2rgb565_i(yiq);
+    }
+}
+
+/* this function will not push to TFT, and is used when combining glitches */
+void glitch_ringing(uint16_t *fb, int w, int h, char ringing_strength, char ringing_delay) {
+    int delta_y;
+    yiqcolori_t yiq_0, yiq_1;
+    
+    for (int noise_pixels = 0; noise_pixels < 8192; noise_pixels++) {
+        int pixelnum = random(h*w);     
+        
+        yiq_1 = rgb2yiq_i(fb[pixelnum]);
+        yiq_0 = rgb2yiq_i(fb[pixelnum - ringing_delay]);
+        delta_y = yiq_1.y - yiq_0.y;
+        delta_y = (delta_y * ringing_strength)/127;
+
+        yiq_1.y = min(max(yiq_1.y - delta_y, 0), 255);
+    
+        fb[pixelnum] = yiq2rgb565_i(yiq_1);
     }
 }
 
